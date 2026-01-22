@@ -1,5 +1,6 @@
 # The Main Music Site
 paidguy.duckdns.org {
+encode zstd gzip  # <--- ADD THIS LINE
     reverse_proxy navidrome:4533
 }
 
