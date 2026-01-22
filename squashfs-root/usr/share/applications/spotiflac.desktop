@@ -1,0 +1,7 @@
+[Desktop Entry]
+Name=SpotiFLAC
+Exec=SpotiFLAC
+Icon=spotiflac
+Type=Application
+Categories=Audio;AudioVideo;
+Comment=Get Spotify tracks in true FLAC from Tidal/Deezer

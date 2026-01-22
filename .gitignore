@@ -1,0 +1,14 @@
+# Ignore Music & Data
+music/*
+data/*
+
+# Keep the folder structure but not files
+!music/.gitkeep
+!data/.gitkeep
+
+# Ignore OS files
+.DS_Store
+Thumbs.db
+
+# Ignore large binaries
+*.AppImage

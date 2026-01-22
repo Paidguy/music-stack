@@ -1,0 +1,9 @@
+# The Main Music Site
+paidguy.duckdns.org {
+    reverse_proxy navidrome:4533
+}
+
+# The Web Desktop (on Port 8443)
+paidguy.duckdns.org:8443 {
+    reverse_proxy host.docker.internal:6080
+}
