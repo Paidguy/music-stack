@@ -3,6 +3,15 @@
 echo "🎵 Starting Music Stack Setup..."
 TARGET_USER="${SUDO_USER:-$USER}"
 TARGET_HOME="$(eval echo "~$TARGET_USER")"
+if ! id "$TARGET_USER" >/dev/null 2>&1; then
+    echo "❌ Target user '$TARGET_USER' does not exist."
+    exit 1
+fi
+if [[ ! "$TARGET_USER" =~ ^[a-z_][a-z0-9_-]*$ ]]; then
+    echo "❌ Target user '$TARGET_USER' contains unsupported characters."
+    exit 1
+fi
+SAFE_TARGET_USER="$(printf '%s' "$TARGET_USER" | sed 's/[\\/&]/\\&/g')"
 
 # 1. Update & Install System Dependencies
 # We need xfce (desktop), tightvnc (server), novnc (web bridge), and libfuse2 (for AppImage)
@@ -18,7 +27,7 @@ chmod +x SpotiFLAC.AppImage
 
 # 2.5 Create data folders with user-owned permissions
 mkdir -p ./music ./data/navidrome ./data/syncthing
-sudo chown -R "$TARGET_USER:$TARGET_USER" ./music ./data
+sudo chown -R "$TARGET_USER:$TARGET_USER" ./music ./data/navidrome ./data/syncthing
 
 # 3. Configure VNC Startup
 # This ensures the gray screen doesn't happen
@@ -32,8 +41,11 @@ sudo chown -R "$TARGET_USER:$TARGET_USER" "$TARGET_HOME/.vnc"
 # Copies the service file from your repo to the system folder
 echo "🔗 Installing Web Desktop Service..."
 if [ -f "./scripts/novnc.service" ]; then
-    sudo sed "s/__NOVNC_USER__/$TARGET_USER/" ./scripts/novnc.service > /tmp/novnc.service
-    sudo cp /tmp/novnc.service /etc/systemd/system/novnc.service
+    TMP_SERVICE_FILE="$(mktemp)"
+    chmod 600 "$TMP_SERVICE_FILE"
+    sed "s/__NOVNC_USER__/$SAFE_TARGET_USER/" ./scripts/novnc.service > "$TMP_SERVICE_FILE"
+    sudo cp "$TMP_SERVICE_FILE" /etc/systemd/system/novnc.service
+    rm -f "$TMP_SERVICE_FILE"
     sudo systemctl daemon-reload
     sudo systemctl enable novnc
     echo "   -> Service installed and enabled."
