@@ -1,6 +1,18 @@
 #!/bin/bash
 
 echo "🎵 Starting Music Stack Setup..."
+TARGET_USER="${SUDO_USER:-$USER}"
+TARGET_HOME="$(eval echo "~$TARGET_USER")"
+PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+if ! id "$TARGET_USER" >/dev/null 2>&1; then
+    echo "❌ Target user '$TARGET_USER' does not exist."
+    exit 1
+fi
+if [[ ! "$TARGET_USER" =~ ^[a-z_][a-z0-9_-]*$ ]]; then
+    echo "❌ Target user '$TARGET_USER' contains unsupported characters."
+    exit 1
+fi
+SAFE_TARGET_USER="$(printf '%s' "$TARGET_USER" | sed 's/[\\/&]/\\&/g')"
 
 # 1. Update & Install System Dependencies
 # We need xfce (desktop), tightvnc (server), novnc (web bridge), and libfuse2 (for AppImage)
@@ -11,21 +23,30 @@ sudo apt install -y xfce4 xfce4-goodies tightvncserver novnc python3-websockify 
 # 2. Download SpotiFLAC (The Downloader)
 # We download it to the root project folder for easy access
 echo "⬇️ Downloading SpotiFLAC v7.0.6..."
-wget -q --show-progress -O SpotiFLAC.AppImage https://github.com/afkarxyz/SpotiFLAC/releases/download/v7.0.6/SpotiFLAC-Linux-x86_64.AppImage
-chmod +x SpotiFLAC.AppImage
+wget -q --show-progress -O "$PROJECT_ROOT/SpotiFLAC.AppImage" https://github.com/afkarxyz/SpotiFLAC/releases/download/v7.0.6/SpotiFLAC-Linux-x86_64.AppImage
+chmod +x "$PROJECT_ROOT/SpotiFLAC.AppImage"
+
+# 2.5 Create data folders with user-owned permissions
+mkdir -p "$PROJECT_ROOT/music" "$PROJECT_ROOT/data/navidrome" "$PROJECT_ROOT/data/syncthing"
+sudo chown -R "$TARGET_USER:$TARGET_USER" "$PROJECT_ROOT/music" "$PROJECT_ROOT/data/navidrome" "$PROJECT_ROOT/data/syncthing"
 
 # 3. Configure VNC Startup
 # This ensures the gray screen doesn't happen
 echo "⚙️ Configuring VNC Startup..."
-mkdir -p ~/.vnc
-echo -e "#!/bin/bash\nxrdb \$HOME/.Xresources\nstartxfce4 &" > ~/.vnc/xstartup
-chmod +x ~/.vnc/xstartup
+mkdir -p "$TARGET_HOME/.vnc"
+echo -e "#!/bin/bash\nxrdb \$HOME/.Xresources\nstartxfce4 &" > "$TARGET_HOME/.vnc/xstartup"
+chmod +x "$TARGET_HOME/.vnc/xstartup"
+sudo chown -R "$TARGET_USER:$TARGET_USER" "$TARGET_HOME/.vnc"
 
 # 4. Install noVNC System Service
 # Copies the service file from your repo to the system folder
 echo "🔗 Installing Web Desktop Service..."
-if [ -f "./scripts/novnc.service" ]; then
-    sudo cp ./scripts/novnc.service /etc/systemd/system/
+if [ -f "$PROJECT_ROOT/scripts/novnc.service" ]; then
+    TMP_SERVICE_FILE="$(mktemp)"
+    chmod 600 "$TMP_SERVICE_FILE"
+    sed "s/__NOVNC_USER__/$SAFE_TARGET_USER/" "$PROJECT_ROOT/scripts/novnc.service" > "$TMP_SERVICE_FILE"
+    sudo cp "$TMP_SERVICE_FILE" /etc/systemd/system/novnc.service
+    rm -f "$TMP_SERVICE_FILE"
     sudo systemctl daemon-reload
     sudo systemctl enable novnc
     echo "   -> Service installed and enabled."

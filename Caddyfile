@@ -1,10 +1,10 @@
 # The Main Music Site
 paidguy.duckdns.org {
-encode zstd gzip  # <--- ADD THIS LINE
-    reverse_proxy navidrome:4533
+    encode zstd gzip
+    reverse_proxy http://navidrome:4533
 }
 
 # The Web Desktop (on Port 8443)
 paidguy.duckdns.org:8443 {
-    reverse_proxy host.docker.internal:6080
+    reverse_proxy http://host.docker.internal:6080
 }

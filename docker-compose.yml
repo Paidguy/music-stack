@@ -1,14 +1,12 @@
 services:
   navidrome:
     image: deluan/navidrome:latest
-    user: 1000:1000
     ports:
       - "4533:4533"
     environment:
       # Existing settings...
       ND_SCANSCHEDULE: 1h
       ND_LOGLEVEL: info
-      ND_BASEURL: "https://paidguy.duckdns.org"
       
       # --- NEW PERFORMANCE SETTINGS ---
       # Cache images in memory so scrolling is instant
@@ -28,8 +26,8 @@ services:
     image: syncthing/syncthing
     hostname: aws-music-server
     environment:
-      - PUID=1000
-      - PGID=1000
+      - PUID=${UID:-1000}
+      - PGID=${GID:-1000}
     volumes:
       - "./data/syncthing:/var/syncthing/config"
       - "./music:/var/syncthing/Music"
@@ -41,6 +39,8 @@ services:
 
   caddy:
     image: caddy:latest
+    depends_on:
+      - navidrome
     ports:
       - "80:80"
       - "443:443"
@@ -48,7 +48,7 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
     volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
       - caddy_config:/config
     restart: unless-stopped
